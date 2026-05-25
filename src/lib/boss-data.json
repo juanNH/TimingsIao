@@ -1,0 +1,66 @@
+[
+  {
+    "id": "garveloth",
+    "name": "Garveloth",
+    "shortName": "GA",
+    "respawnMinMinutes": 30,
+    "respawnMaxMinutes": 45,
+    "respawnLabel": "Respawn: 30 - 45 m"
+  },
+  {
+    "id": "archimago",
+    "name": "Archimago",
+    "shortName": "AR",
+    "respawnMinMinutes": 360,
+    "respawnMaxMinutes": 540,
+    "respawnLabel": "Respawn: 6 h - 9 h"
+  },
+  {
+    "id": "djin",
+    "name": "Djin",
+    "shortName": "DJ",
+    "respawnMinMinutes": 240,
+    "respawnMaxMinutes": 390,
+    "respawnLabel": "Respawn: 4 h - 6 h 30 m"
+  },
+  {
+    "id": "guarda",
+    "name": "Guarda",
+    "shortName": "GU",
+    "respawnMinMinutes": 210,
+    "respawnMaxMinutes": 330,
+    "respawnLabel": "Respawn: 3 h 30 m - 5 h 30 m"
+  },
+  {
+    "id": "gorgona",
+    "name": "Gorgona",
+    "shortName": "GO",
+    "respawnMinMinutes": 45,
+    "respawnMaxMinutes": 100,
+    "respawnLabel": "Respawn: 45 m - 1 h 40 m"
+  },
+  {
+    "id": "khern-ghard",
+    "name": "Khern Ghard",
+    "shortName": "KG",
+    "respawnMinMinutes": 300,
+    "respawnMaxMinutes": 480,
+    "respawnLabel": "Respawn: 5 h - 8 h"
+  },
+  {
+    "id": "vampiro",
+    "name": "Vampiro",
+    "shortName": "VA",
+    "respawnMinMinutes": 60,
+    "respawnMaxMinutes": 240,
+    "respawnLabel": "Respawn: 1 h - 4 h"
+  },
+  {
+    "id": "abyssaria",
+    "name": "Abyssaria",
+    "shortName": "AB",
+    "respawnMinMinutes": 210,
+    "respawnMaxMinutes": 330,
+    "respawnLabel": "Respawn: 3 h 30 m - 5 h 30 m"
+  }
+]

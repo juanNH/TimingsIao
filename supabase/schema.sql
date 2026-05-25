@@ -27,3 +27,5 @@ for update
 to anon
 using (true)
 with check (true);
+alter table public.boss_records
+add column if not exists last_notified_window text;

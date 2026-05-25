@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "notify:spawns": "node scripts/notify-spawns.mjs",
+    "notify:spawns:dry-run": "node scripts/notify-spawns.mjs --dry-run"
   },
   "dependencies": {
     "next": "^16.2.6",

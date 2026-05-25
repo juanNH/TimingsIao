@@ -44,3 +44,20 @@ $env:GITHUB_PAGES='true'; npm.cmd run build
 ```
 
 El build estatico queda en `out/`.
+
+## Discord
+
+El workflow `.github/workflows/notify-spawns.yml` revisa Supabase cada 5 minutos
+y avisa por Discord cuando un boss esta dentro de su ventana de spawn.
+
+Requiere el secret de GitHub Actions:
+
+```bash
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+Para probar localmente sin mandar mensajes:
+
+```bash
+npm.cmd run notify:spawns:dry-run
+```
