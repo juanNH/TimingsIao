@@ -2,6 +2,7 @@ export type BossRecord = {
   bossId: string;
   lastSeenAt: string;
   updatedAt: string;
+  lastNotifiedWindow: string | null;
 };
 
 export type StorageMode = "loading" | "supabase" | "local";
@@ -10,6 +11,7 @@ type SupabaseBossRecord = {
   boss_id: string;
   last_seen_at: string;
   updated_at: string;
+  last_notified_window: string | null;
 };
 
 const localStorageKey = "timings-iao-records";
@@ -25,7 +27,8 @@ function toRecord(row: SupabaseBossRecord): BossRecord {
   return {
     bossId: row.boss_id,
     lastSeenAt: row.last_seen_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    lastNotifiedWindow: row.last_notified_window
   };
 }
 
@@ -86,7 +89,7 @@ export async function loadRecords(): Promise<{
 
   try {
     const rows = (await supabaseRequest(
-      `${supabaseTable}?select=boss_id,last_seen_at,updated_at`
+      `${supabaseTable}?select=boss_id,last_seen_at,updated_at,last_notified_window`
     )) as SupabaseBossRecord[];
 
     return { records: rows.map(toRecord), mode: "supabase" };
@@ -102,7 +105,8 @@ export async function saveRecord(input: {
   const record: BossRecord = {
     bossId: input.bossId,
     lastSeenAt: input.lastSeenAt,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    lastNotifiedWindow: null
   };
 
   if (!hasSupabaseConfig()) {
@@ -116,7 +120,8 @@ export async function saveRecord(input: {
       body: JSON.stringify({
         boss_id: record.bossId,
         last_seen_at: record.lastSeenAt,
-        updated_at: record.updatedAt
+        updated_at: record.updatedAt,
+        last_notified_window: null
       }),
       headers: {
         Prefer: "resolution=merge-duplicates,return=representation"
