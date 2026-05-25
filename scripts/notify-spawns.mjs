@@ -39,25 +39,38 @@ for (const boss of bosses) {
   const lastSeenAt = new Date(record.last_seen_at);
   const start = addMinutes(lastSeenAt, boss.respawnMinMinutes);
   const end = addMinutes(lastSeenAt, boss.respawnMaxMinutes);
-
-  if (now < start || now > end) continue;
-
   const windowKey = `${boss.id}:${start.toISOString()}:${end.toISOString()}`;
-  if (record.last_notified_window === windowKey) continue;
 
-  const content = [
-    `@here ${boss.name} esta en ventana de spawn.`,
-    `Aparece: ${formatDateTime(start)} a ${formatDateTime(end)}.`,
-    `Ultimo registro: ${formatDateTime(lastSeenAt)}.`
-  ].join("\n");
+  const event =
+    now >= start && now <= end
+      ? {
+          key: `${windowKey}:active`,
+          content: [
+            `@here ${boss.name} entro en ventana de spawn.`,
+            `Aparece: ${formatDateTime(start)} a ${formatDateTime(end)}.`,
+            `Ultimo registro: ${formatDateTime(lastSeenAt)}.`
+          ].join("\n")
+        }
+      : now > end
+        ? {
+            key: `${windowKey}:lost`,
+            content: [
+              `${boss.name}: spawn perdido.`,
+              `La ventana era: ${formatDateTime(start)} a ${formatDateTime(end)}.`,
+              `Ultimo registro: ${formatDateTime(lastSeenAt)}.`
+            ].join("\n")
+          }
+        : null;
+
+  if (!event || record.last_notified_window === event.key) continue;
 
   if (dryRun) {
-    console.log(`[dry-run] ${content}`);
+    console.log(`[dry-run] ${event.content}`);
   } else {
-    await sendDiscordMessage(content);
+    await sendDiscordMessage(event.content);
     await supabaseRequest(`${supabaseTable}?boss_id=eq.${encodeURIComponent(boss.id)}`, {
       method: "PATCH",
-      body: JSON.stringify({ last_notified_window: windowKey })
+      body: JSON.stringify({ last_notified_window: event.key })
     });
   }
 
