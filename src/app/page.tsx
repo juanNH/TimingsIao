@@ -17,6 +17,10 @@ import {
   type BossRecord,
   type StorageMode
 } from "@/lib/storage";
+import {
+  subscribeToBossRecords,
+  type RealtimeStatus
+} from "@/lib/realtime";
 
 type Draft = {
   date: string;
@@ -57,11 +61,21 @@ function makeDraft(date: Date): Draft {
   };
 }
 
+function realtimeStatusLabel(status: RealtimeStatus) {
+  if (status === "connected") return "conectado";
+  if (status === "connecting") return "conectando";
+  if (status === "error") return "error";
+  if (status === "closed") return "cerrado";
+  return "desactivado";
+}
+
 export default function Home() {
   const [records, setRecords] = useState<Record<string, BossRecord>>({});
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [now, setNow] = useState(() => new Date());
   const [storageMode, setStorageMode] = useState<StorageMode>("loading");
+  const [realtimeStatus, setRealtimeStatus] =
+    useState<RealtimeStatus>("disabled");
   const [savingBossId, setSavingBossId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +120,21 @@ export default function Home() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (storageMode !== "supabase") return;
+
+    return subscribeToBossRecords({
+      onRecord: (record) => {
+        setRecords((current) => ({ ...current, [record.bossId]: record }));
+        setDrafts((current) => ({
+          ...current,
+          [record.bossId]: makeDraft(new Date(record.lastSeenAt))
+        }));
+      },
+      onStatus: setRealtimeStatus
+    });
+  }, [storageMode]);
 
   const sortedBosses = useMemo(() => BOSSES, []);
 
@@ -166,7 +195,7 @@ export default function Home() {
           </p>
           <p className="sync-help">
             {storageMode === "supabase"
-              ? "Los registros se comparten entre dispositivos."
+              ? `Los registros se comparten entre dispositivos. Tiempo real: ${realtimeStatusLabel(realtimeStatus)}.`
               : "Configura Supabase para compartir los datos online."}
           </p>
         </aside>

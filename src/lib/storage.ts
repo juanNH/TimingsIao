@@ -7,7 +7,7 @@ export type BossRecord = {
 
 export type StorageMode = "loading" | "supabase" | "local";
 
-type SupabaseBossRecord = {
+export type SupabaseBossRecord = {
   boss_id: string;
   last_seen_at: string;
   updated_at: string;
@@ -23,7 +23,7 @@ function hasSupabaseConfig() {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
-function toRecord(row: SupabaseBossRecord): BossRecord {
+export function toRecord(row: SupabaseBossRecord): BossRecord {
   return {
     bossId: row.boss_id,
     lastSeenAt: row.last_seen_at,

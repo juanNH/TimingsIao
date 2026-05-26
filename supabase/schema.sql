@@ -29,3 +29,8 @@ using (true)
 with check (true);
 alter table public.boss_records
 add column if not exists last_notified_window text;
+
+create extension if not exists pg_cron with schema extensions;
+create extension if not exists pg_net with schema extensions;
+
+alter publication supabase_realtime add table public.boss_records;
