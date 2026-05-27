@@ -195,12 +195,7 @@ export default function Home() {
 
       setUndoRecords((current) => {
         const next = { ...current };
-        const currentRecord = records[boss.id];
-        if (currentRecord) {
-          next[boss.id] = currentRecord;
-        } else {
-          delete next[boss.id];
-        }
+        delete next[boss.id];
         return next;
       });
       setRecords((current) => ({ ...current, [boss.id]: saved.record }));

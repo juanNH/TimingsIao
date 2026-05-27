@@ -46,13 +46,5 @@
     "respawnMinMinutes": 300,
     "respawnMaxMinutes": 480,
     "respawnLabel": "Respawn: 5 h - 8 h"
-  },
-  {
-    "id": "vampiro",
-    "name": "Vampiro",
-    "shortName": "VA",
-    "respawnMinMinutes": 60,
-    "respawnMaxMinutes": 240,
-    "respawnLabel": "Respawn: 1 h - 4 h"
   }
 ]

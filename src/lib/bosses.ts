@@ -5,7 +5,6 @@ import garvelothImage from "@/assets/bosses/garveloth.png";
 import gorgonaImage from "@/assets/bosses/gorgona.png";
 import guardaImage from "@/assets/bosses/guarda.png";
 import khernGhardImage from "@/assets/bosses/khern-ghard.png";
-import vampiroImage from "@/assets/bosses/vampiro.png";
 import bossData from "@/lib/boss-data.json";
 
 export type Boss = {
@@ -24,8 +23,7 @@ const imagesByBossId: Record<string, StaticImageData> = {
   garveloth: garvelothImage,
   gorgona: gorgonaImage,
   guarda: guardaImage,
-  "khern-ghard": khernGhardImage,
-  vampiro: vampiroImage
+  "khern-ghard": khernGhardImage
 };
 
 export const BOSSES: Boss[] = bossData.map((boss) => ({

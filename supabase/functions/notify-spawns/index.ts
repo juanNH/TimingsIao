@@ -34,12 +34,6 @@ const BOSSES = [
     name: "Khern Ghard",
     respawnMinMinutes: 300,
     respawnMaxMinutes: 480
-  },
-  {
-    id: "vampiro",
-    name: "Vampiro",
-    respawnMinMinutes: 60,
-    respawnMaxMinutes: 240
   }
 ];
 
