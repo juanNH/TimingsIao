@@ -54,13 +54,5 @@
     "respawnMinMinutes": 60,
     "respawnMaxMinutes": 240,
     "respawnLabel": "Respawn: 1 h - 4 h"
-  },
-  {
-    "id": "abyssaria",
-    "name": "Abyssaria",
-    "shortName": "AB",
-    "respawnMinMinutes": 210,
-    "respawnMaxMinutes": 330,
-    "respawnLabel": "Respawn: 3 h 30 m - 5 h 30 m"
   }
 ]

@@ -40,12 +40,6 @@ const BOSSES = [
     name: "Vampiro",
     respawnMinMinutes: 60,
     respawnMaxMinutes: 240
-  },
-  {
-    id: "abyssaria",
-    name: "Abyssaria",
-    respawnMinMinutes: 210,
-    respawnMaxMinutes: 330
   }
 ];
 

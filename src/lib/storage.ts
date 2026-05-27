@@ -101,12 +101,13 @@ export async function loadRecords(): Promise<{
 export async function saveRecord(input: {
   bossId: string;
   lastSeenAt: string;
+  lastNotifiedWindow?: string | null;
 }): Promise<{ record: BossRecord; mode: StorageMode }> {
   const record: BossRecord = {
     bossId: input.bossId,
     lastSeenAt: input.lastSeenAt,
     updatedAt: new Date().toISOString(),
-    lastNotifiedWindow: null
+    lastNotifiedWindow: input.lastNotifiedWindow ?? null
   };
 
   if (!hasSupabaseConfig()) {
@@ -121,7 +122,7 @@ export async function saveRecord(input: {
         boss_id: record.bossId,
         last_seen_at: record.lastSeenAt,
         updated_at: record.updatedAt,
-        last_notified_window: null
+        last_notified_window: record.lastNotifiedWindow
       }),
       headers: {
         Prefer: "resolution=merge-duplicates,return=representation"

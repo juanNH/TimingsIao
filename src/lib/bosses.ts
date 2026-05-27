@@ -1,5 +1,4 @@
 import type { StaticImageData } from "next/image";
-import abyssariaImage from "@/assets/bosses/abyssaria.png";
 import archimagoImage from "@/assets/bosses/archimago.png";
 import djinImage from "@/assets/bosses/djin.png";
 import garvelothImage from "@/assets/bosses/garveloth.png";
@@ -20,7 +19,6 @@ export type Boss = {
 };
 
 const imagesByBossId: Record<string, StaticImageData> = {
-  abyssaria: abyssariaImage,
   archimago: archimagoImage,
   djin: djinImage,
   garveloth: garvelothImage,

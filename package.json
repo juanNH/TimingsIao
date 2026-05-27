@@ -5,9 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "eslint .",
-    "notify:spawns": "node scripts/notify-spawns.mjs",
-    "notify:spawns:dry-run": "node scripts/notify-spawns.mjs --dry-run"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

@@ -71,6 +71,7 @@ function realtimeStatusLabel(status: RealtimeStatus) {
 
 export default function Home() {
   const [records, setRecords] = useState<Record<string, BossRecord>>({});
+  const [undoRecords, setUndoRecords] = useState<Record<string, BossRecord>>({});
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [now, setNow] = useState(() => new Date());
   const [storageMode, setStorageMode] = useState<StorageMode>("loading");
@@ -156,6 +157,11 @@ export default function Home() {
         lastSeenAt: lastSeenAt.toISOString()
       });
 
+      setUndoRecords((current) => {
+        const previousRecord = records[boss.id];
+        if (!previousRecord) return current;
+        return { ...current, [boss.id]: previousRecord };
+      });
       setRecords((current) => ({ ...current, [boss.id]: saved.record }));
       setDrafts((current) => ({
         ...current,
@@ -167,6 +173,47 @@ export default function Home() {
         saveError instanceof Error
           ? saveError.message
           : "No se pudo guardar el registro."
+      );
+    } finally {
+      setSavingBossId(null);
+    }
+  }
+
+  async function undoBoss(boss: Boss) {
+    const recordToRestore = undoRecords[boss.id];
+    if (!recordToRestore) return;
+
+    setError(null);
+    setSavingBossId(boss.id);
+
+    try {
+      const saved = await saveRecord({
+        bossId: boss.id,
+        lastSeenAt: recordToRestore.lastSeenAt,
+        lastNotifiedWindow: recordToRestore.lastNotifiedWindow
+      });
+
+      setUndoRecords((current) => {
+        const next = { ...current };
+        const currentRecord = records[boss.id];
+        if (currentRecord) {
+          next[boss.id] = currentRecord;
+        } else {
+          delete next[boss.id];
+        }
+        return next;
+      });
+      setRecords((current) => ({ ...current, [boss.id]: saved.record }));
+      setDrafts((current) => ({
+        ...current,
+        [boss.id]: makeDraft(new Date(saved.record.lastSeenAt))
+      }));
+      setStorageMode(saved.mode);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "No se pudo deshacer el registro."
       );
     } finally {
       setSavingBossId(null);
@@ -212,6 +259,7 @@ export default function Home() {
             : null;
           const draft = drafts[boss.id] ?? makeDraft(now);
           const isSaving = savingBossId === boss.id;
+          const canUndo = Boolean(undoRecords[boss.id]);
 
           return (
             <article
@@ -267,22 +315,33 @@ export default function Home() {
                   : "Sin registros todavia"}
               </p>
 
-              <button
-                className="register-button"
-                type="button"
-                disabled={isSaving}
-                onClick={() => registerBoss(boss, false)}
-              >
-                {isSaving ? "Guardando..." : "Registrar"}
-              </button>
+              <div className="actions-row">
+                <button
+                  className="register-button"
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => registerBoss(boss, false)}
+                >
+                  {isSaving ? "Guardando..." : "Registrar"}
+                </button>
+
+                <button
+                  className="register-button"
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => registerBoss(boss, true)}
+                >
+                  Ahora
+                </button>
+              </div>
 
               <button
-                className="register-button"
+                className="undo-button"
                 type="button"
-                disabled={isSaving}
-                onClick={() => registerBoss(boss, true)}
+                disabled={isSaving || !canUndo}
+                onClick={() => undoBoss(boss)}
               >
-                Ahora
+                Deshacer ultimo cambio
               </button>
 
               <div className="card-footer">
