@@ -17,6 +17,7 @@ function errorMessage(error: unknown, fallback: string) {
 export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const refreshProfile = useCallback(async () => {
@@ -61,11 +62,15 @@ export function useAuth() {
 
   const signIn = useCallback(async (username: string, password: string) => {
     setError(null);
+    setNotice(null);
     setLoading(true);
 
     try {
       const nextProfile = await login({ username, password });
       setProfile(nextProfile);
+      if (nextProfile && !nextProfile.isActive) {
+        setNotice("Tu cuenta existe, pero todavia esta pendiente de aprobacion.");
+      }
     } catch (authError) {
       setError(errorMessage(authError, "No se pudo iniciar sesion."));
     } finally {
@@ -75,12 +80,14 @@ export function useAuth() {
 
   const signUp = useCallback(async (username: string, password: string) => {
     setError(null);
+    setNotice(null);
     setLoading(true);
 
     try {
       await register({ username, password });
       await login({ username, password }).catch(() => null);
       await refreshProfile();
+      setNotice("Cuenta registrada. Esta a la espera de ser aprobada.");
     } catch (authError) {
       setError(errorMessage(authError, "No se pudo registrar la cuenta."));
     } finally {
@@ -90,6 +97,7 @@ export function useAuth() {
 
   const signOut = useCallback(async () => {
     setError(null);
+    setNotice(null);
     setLoading(true);
 
     try {
@@ -106,6 +114,7 @@ export function useAuth() {
     error,
     isActive: Boolean(profile?.isActive),
     loading,
+    notice,
     profile,
     signIn,
     signOut,

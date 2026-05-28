@@ -5,9 +5,10 @@ import { type UserProfile } from "@/lib/auth";
 
 type AuthPanelProps = {
   error: string | null;
-  initialMode?: "login" | "register";
+  mode: "login" | "register";
   isActive: boolean;
   loading: boolean;
+  notice: string | null;
   profile: UserProfile | null;
   onLogin: (username: string, password: string) => Promise<void>;
   onLogout: () => Promise<void>;
@@ -16,15 +17,15 @@ type AuthPanelProps = {
 
 export function AuthPanel({
   error,
-  initialMode = "login",
+  mode,
   isActive,
   loading,
+  notice,
   profile,
   onLogin,
   onLogout,
   onRegister
 }: AuthPanelProps) {
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
 
@@ -49,6 +50,7 @@ export function AuthPanel({
               ? "Cuenta activa. Puede registrar cambios."
               : "Cuenta pendiente de activacion."}
           </p>
+          {notice ? <p className="success-message">{notice}</p> : null}
         </div>
         <button
           className="secondary-button"
@@ -65,22 +67,7 @@ export function AuthPanel({
   return (
     <section className="auth-panel" aria-label="Acceso">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <div className="auth-mode">
-          <button
-            className={`tab-button ${mode === "login" ? "active" : ""}`}
-            type="button"
-            onClick={() => setMode("login")}
-          >
-            Login
-          </button>
-          <button
-            className={`tab-button ${mode === "register" ? "active" : ""}`}
-            type="button"
-            onClick={() => setMode("register")}
-          >
-            Registro
-          </button>
-        </div>
+        <p className="sync-title">{mode === "login" ? "Login" : "Registro"}</p>
 
         <label>
           <span className="field-label">Usuario</span>
@@ -114,6 +101,7 @@ export function AuthPanel({
         </button>
 
         {error ? <p className="error">{error}</p> : null}
+        {notice ? <p className="success-message">{notice}</p> : null}
       </form>
     </section>
   );

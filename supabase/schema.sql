@@ -65,18 +65,14 @@ $$;
 alter table public.boss_records enable row level security;
 
 drop policy if exists "Public read boss records" on public.boss_records;
-create policy "Public read boss records"
-on public.boss_records
-for select
-to anon
-using (true);
 
 drop policy if exists "Authenticated read boss records" on public.boss_records;
-create policy "Authenticated read boss records"
+drop policy if exists "Active users read boss records" on public.boss_records;
+create policy "Active users read boss records"
 on public.boss_records
 for select
 to authenticated
-using (true);
+using (public.is_active_user());
 
 drop policy if exists "Public upsert boss records" on public.boss_records;
 drop policy if exists "Active users insert boss records" on public.boss_records;
@@ -166,18 +162,14 @@ add column if not exists changed_by_username text;
 alter table public.boss_record_history enable row level security;
 
 drop policy if exists "Public read boss record history" on public.boss_record_history;
-create policy "Public read boss record history"
-on public.boss_record_history
-for select
-to anon
-using (true);
 
 drop policy if exists "Authenticated read boss record history" on public.boss_record_history;
-create policy "Authenticated read boss record history"
+drop policy if exists "Active users read boss record history" on public.boss_record_history;
+create policy "Active users read boss record history"
 on public.boss_record_history
 for select
 to authenticated
-using (true);
+using (public.is_active_user());
 
 create or replace function public.log_boss_record_history()
 returns trigger

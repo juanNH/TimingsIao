@@ -149,6 +149,13 @@ h1 {
   padding: 0 10px;
 }
 
+.success-message {
+  margin: 0;
+  color: var(--success);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .sync-title {
   margin: 0 0 8px;
   font-size: 0.8rem;

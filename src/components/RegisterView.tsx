@@ -19,9 +19,10 @@ export function RegisterView() {
 
         <AuthPanel
           error={auth.error}
-          initialMode="register"
           isActive={auth.isActive}
           loading={auth.loading}
+          mode="register"
+          notice={auth.notice}
           profile={auth.profile}
           onLogin={auth.signIn}
           onLogout={auth.signOut}
