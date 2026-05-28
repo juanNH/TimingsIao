@@ -337,3 +337,51 @@ begin
     alter publication supabase_realtime add table public.boss_records;
   end if;
 end $$;
+
+do $$
+declare
+  existing_job record;
+begin
+  for existing_job in
+    select jobid
+    from cron.job
+    where jobname in (
+      'notify-spawns-every-5-minutes',
+      'notify-spawns-every-minute'
+    )
+  loop
+    perform cron.unschedule(existing_job.jobid);
+  end loop;
+end $$;
+
+select cron.schedule(
+  'notify-spawns-every-minute',
+  '* * * * *',
+  $$
+  select net.http_post(
+    url := (
+      select decrypted_secret
+      from vault.decrypted_secrets
+      where name = 'project_url'
+      limit 1
+    ) || '/functions/v1/notify-spawns',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (
+        select decrypted_secret
+        from vault.decrypted_secrets
+        where name = 'service_role_key'
+        limit 1
+      ),
+      'apikey', (
+        select decrypted_secret
+        from vault.decrypted_secrets
+        where name = 'service_role_key'
+        limit 1
+      )
+    ),
+    body := jsonb_build_object('triggered_at', now()),
+    timeout_milliseconds := 10000
+  );
+  $$
+);
