@@ -6,7 +6,6 @@ export type BossRecord = {
   lastSeenAt: string;
   updatedAt: string;
   lastNotifiedWindow: string | null;
-  changedByUserId: string | null;
   changedByUsername: string | null;
 };
 
@@ -17,7 +16,6 @@ export type SupabaseBossRecord = {
   last_seen_at: string;
   updated_at: string;
   last_notified_window: string | null;
-  changed_by_user_id: string | null;
   changed_by_username: string | null;
 };
 
@@ -29,7 +27,6 @@ export type BossRecordHistoryItem = {
   newLastSeenAt: string;
   previousRecord: Record<string, unknown> | null;
   newRecord: Record<string, unknown> | null;
-  changedByUserId: string | null;
   changedByUsername: string | null;
   changedAt: string;
 };
@@ -42,7 +39,6 @@ type SupabaseBossRecordHistoryItem = {
   new_last_seen_at: string;
   previous_record: Record<string, unknown> | null;
   new_record: Record<string, unknown> | null;
-  changed_by_user_id: string | null;
   changed_by_username: string | null;
   changed_at: string;
 };
@@ -56,7 +52,6 @@ export function toRecord(row: SupabaseBossRecord): BossRecord {
     lastSeenAt: row.last_seen_at,
     updatedAt: row.updated_at,
     lastNotifiedWindow: row.last_notified_window,
-    changedByUserId: row.changed_by_user_id,
     changedByUsername: row.changed_by_username
   };
 }
@@ -72,7 +67,6 @@ function toHistoryItem(
     newLastSeenAt: row.new_last_seen_at,
     previousRecord: row.previous_record,
     newRecord: row.new_record,
-    changedByUserId: row.changed_by_user_id,
     changedByUsername: row.changed_by_username,
     changedAt: row.changed_at
   };
@@ -113,7 +107,7 @@ export async function loadRecords(): Promise<{
     const { data, error } = await supabase
       .from(supabaseTable)
       .select(
-        "boss_id,last_seen_at,updated_at,last_notified_window,changed_by_user_id,changed_by_username"
+        "boss_id,last_seen_at,updated_at,last_notified_window,changed_by_username"
       );
 
     if (error) throw error;
@@ -137,7 +131,6 @@ export async function saveRecord(input: {
     lastSeenAt: input.lastSeenAt,
     updatedAt: new Date().toISOString(),
     lastNotifiedWindow: input.lastNotifiedWindow ?? null,
-    changedByUserId: null,
     changedByUsername: getSessionUsername()
   };
 
@@ -184,7 +177,7 @@ export async function loadHistory(input: {
   const { count, data, error } = await supabase
     .from("boss_record_history")
     .select(
-      "id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_by_user_id,changed_by_username,changed_at",
+      "id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_by_username,changed_at",
       { count: "exact" }
     )
     .order("changed_at", { ascending: false })
