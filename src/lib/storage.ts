@@ -14,6 +14,22 @@ export type SupabaseBossRecord = {
   last_notified_window: string | null;
 };
 
+export type BossRecordHistoryItem = {
+  id: number;
+  bossId: string;
+  previousLastSeenAt: string | null;
+  newLastSeenAt: string;
+  changedAt: string;
+};
+
+type SupabaseBossRecordHistoryItem = {
+  id: number;
+  boss_id: string;
+  previous_last_seen_at: string | null;
+  new_last_seen_at: string;
+  changed_at: string;
+};
+
 const localStorageKey = "timings-iao-records";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -29,6 +45,18 @@ export function toRecord(row: SupabaseBossRecord): BossRecord {
     lastSeenAt: row.last_seen_at,
     updatedAt: row.updated_at,
     lastNotifiedWindow: row.last_notified_window
+  };
+}
+
+function toHistoryItem(
+  row: SupabaseBossRecordHistoryItem
+): BossRecordHistoryItem {
+  return {
+    id: row.id,
+    bossId: row.boss_id,
+    previousLastSeenAt: row.previous_last_seen_at,
+    newLastSeenAt: row.new_last_seen_at,
+    changedAt: row.changed_at
   };
 }
 
@@ -77,6 +105,33 @@ async function supabaseRequest(path: string, init?: RequestInit) {
   }
 
   return response.json();
+}
+
+async function supabaseRequestWithCount(path: string, init?: RequestInit) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase no esta configurado.");
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      "Content-Type": "application/json",
+      Prefer: "count=exact",
+      ...init?.headers
+    }
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || "Supabase rechazo la operacion.");
+  }
+
+  return {
+    count: Number(response.headers.get("content-range")?.split("/")[1] ?? 0),
+    data: await response.json()
+  };
 }
 
 export async function loadRecords(): Promise<{
@@ -134,4 +189,32 @@ export async function saveRecord(input: {
     writeLocalRecord(record);
     return { record, mode: "local" };
   }
+}
+
+export async function loadHistory(input: {
+  page: number;
+  pageSize: number;
+}): Promise<{
+  items: BossRecordHistoryItem[];
+  total: number;
+}> {
+  if (!hasSupabaseConfig()) {
+    return { items: [], total: 0 };
+  }
+
+  const from = (input.page - 1) * input.pageSize;
+  const to = from + input.pageSize - 1;
+  const { count, data } = await supabaseRequestWithCount(
+    `boss_record_history?select=id,boss_id,previous_last_seen_at,new_last_seen_at,changed_at&order=changed_at.desc&offset=${from}&limit=${input.pageSize}`,
+    {
+      headers: {
+        Range: `${from}-${to}`
+      }
+    }
+  );
+
+  return {
+    items: (data as SupabaseBossRecordHistoryItem[]).map(toHistoryItem),
+    total: count
+  };
 }
