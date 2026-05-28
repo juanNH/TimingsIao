@@ -10,9 +10,9 @@ type AuthPanelProps = {
   loading: boolean;
   notice: string | null;
   profile: UserProfile | null;
-  onLogin: (username: string, password: string) => Promise<void>;
+  onLogin: (username: string) => Promise<void>;
   onLogout: () => Promise<void>;
-  onRegister: (username: string, password: string) => Promise<void>;
+  onRegister: (username: string) => Promise<void>;
 };
 
 export function AuthPanel({
@@ -26,16 +26,15 @@ export function AuthPanel({
   onLogout,
   onRegister
 }: AuthPanelProps) {
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (mode === "login") {
-      await onLogin(username, password);
+      await onLogin(username);
     } else {
-      await onRegister(username, password);
+      await onRegister(username);
     }
   }
 
@@ -77,18 +76,6 @@ export function AuthPanel({
             required
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-          />
-        </label>
-
-        <label>
-          <span className="field-label">Contrasena</span>
-          <input
-            className="text-input"
-            minLength={6}
-            required
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
           />
         </label>
 

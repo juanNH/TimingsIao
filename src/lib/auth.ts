@@ -6,70 +6,99 @@ export type UserProfile = {
   isActive: boolean;
 };
 
-type SupabaseProfile = {
-  id: string;
+type SupabaseAppUser = {
   username: string;
   is_active: boolean;
 };
 
-function usernameToEmail(username: string) {
-  return `${username.trim().toLowerCase()}@timings.local`;
+const sessionKey = "timings-iao-user";
+
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase();
 }
 
-function toProfile(profile: SupabaseProfile): UserProfile {
+function toProfile(user: SupabaseAppUser): UserProfile {
   return {
-    id: profile.id,
-    username: profile.username,
-    isActive: profile.is_active
+    id: user.username,
+    username: user.username,
+    isActive: user.is_active
   };
 }
 
+function readStoredUsername() {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(sessionKey);
+}
+
+function writeStoredUsername(username: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(sessionKey, username);
+}
+
+function clearStoredUsername() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(sessionKey);
+}
+
+export function getSessionUsername() {
+  return readStoredUsername();
+}
+
+export async function getUserByUsername(username: string) {
+  if (!supabase) throw new Error("Supabase no esta configurado.");
+
+  const { data, error } = await supabase.rpc("get_app_user", {
+    p_username: normalizeUsername(username)
+  });
+
+  if (error) throw error;
+  const user = Array.isArray(data) ? data[0] : data;
+  return user ? toProfile(user as SupabaseAppUser) : null;
+}
+
 export async function getCurrentProfile() {
-  if (!supabase) return null;
+  const username = readStoredUsername();
+  if (!username) return null;
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id,username,is_active")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data ? toProfile(data as SupabaseProfile) : null;
+  try {
+    return await getUserByUsername(username);
+  } catch {
+    clearStoredUsername();
+    return null;
+  }
 }
 
-export async function login(input: { username: string; password: string }) {
-  if (!supabase) throw new Error("Supabase no esta configurado.");
+export async function login(input: { username: string }) {
+  const username = normalizeUsername(input.username);
+  const profile = await getUserByUsername(username);
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email: usernameToEmail(input.username),
-    password: input.password
-  });
+  if (!profile) {
+    throw new Error("El usuario no existe. Primero registralo.");
+  }
 
-  if (error) throw error;
-  return getCurrentProfile();
+  writeStoredUsername(username);
+  return profile;
 }
 
-export async function register(input: { username: string; password: string }) {
+export async function register(input: { username: string }) {
   if (!supabase) throw new Error("Supabase no esta configurado.");
 
-  const username = input.username.trim().toLowerCase();
-  const { error } = await supabase.auth.signUp({
-    email: usernameToEmail(username),
-    password: input.password,
-    options: {
-      data: { username }
+  const username = normalizeUsername(input.username);
+  const { error } = await supabase.from("app_users").insert({ username });
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Ese usuario ya esta registrado.");
     }
-  });
 
-  if (error) throw error;
+    throw error;
+  }
+
+  writeStoredUsername(username);
+  return getUserByUsername(username);
 }
 
 export async function logout() {
-  if (!supabase) return;
-  await supabase.auth.signOut();
+  clearStoredUsername();
+  await supabase?.auth.signOut();
 }

@@ -1,4 +1,5 @@
 import { supabase, hasSupabaseConfig } from "@/lib/supabase";
+import { getSessionUsername } from "@/lib/auth";
 
 export type BossRecord = {
   bossId: string;
@@ -137,7 +138,7 @@ export async function saveRecord(input: {
     updatedAt: new Date().toISOString(),
     lastNotifiedWindow: input.lastNotifiedWindow ?? null,
     changedByUserId: null,
-    changedByUsername: null
+    changedByUsername: getSessionUsername()
   };
 
   if (!hasSupabaseConfig() || !supabase) {
@@ -146,25 +147,20 @@ export async function saveRecord(input: {
   }
 
   try {
-    const { data, error } = await supabase
-      .from(supabaseTable)
-      .upsert(
-        {
-          boss_id: record.bossId,
-          last_seen_at: record.lastSeenAt,
-          updated_at: record.updatedAt,
-          last_notified_window: record.lastNotifiedWindow
-        },
-        { onConflict: "boss_id" }
-      )
-      .select(
-        "boss_id,last_seen_at,updated_at,last_notified_window,changed_by_user_id,changed_by_username"
-      )
-      .single();
+    const username = getSessionUsername();
+    if (!username) throw new Error("Tenes que iniciar sesion.");
+
+    const { data, error } = await supabase.rpc("save_boss_record", {
+      p_boss_id: record.bossId,
+      p_last_notified_window: record.lastNotifiedWindow,
+      p_last_seen_at: record.lastSeenAt,
+      p_username: username
+    });
 
     if (error) throw error;
 
-    return { record: toRecord(data as SupabaseBossRecord), mode: "supabase" };
+    const row = Array.isArray(data) ? data[0] : data;
+    return { record: toRecord(row as SupabaseBossRecord), mode: "supabase" };
   } catch (error) {
     throw error instanceof Error
       ? error

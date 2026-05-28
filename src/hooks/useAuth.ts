@@ -60,13 +60,13 @@ export function useAuth() {
     };
   }, [refreshProfile]);
 
-  const signIn = useCallback(async (username: string, password: string) => {
+  const signIn = useCallback(async (username: string) => {
     setError(null);
     setNotice(null);
     setLoading(true);
 
     try {
-      const nextProfile = await login({ username, password });
+      const nextProfile = await login({ username });
       setProfile(nextProfile);
       if (nextProfile && !nextProfile.isActive) {
         setNotice("Tu cuenta existe, pero todavia esta pendiente de aprobacion.");
@@ -78,22 +78,21 @@ export function useAuth() {
     }
   }, []);
 
-  const signUp = useCallback(async (username: string, password: string) => {
+  const signUp = useCallback(async (username: string) => {
     setError(null);
     setNotice(null);
     setLoading(true);
 
     try {
-      await register({ username, password });
-      await login({ username, password }).catch(() => null);
-      await refreshProfile();
+      const nextProfile = await register({ username });
+      setProfile(nextProfile);
       setNotice("Cuenta registrada. Esta a la espera de ser aprobada.");
     } catch (authError) {
       setError(errorMessage(authError, "No se pudo registrar la cuenta."));
     } finally {
       setLoading(false);
     }
-  }, [refreshProfile]);
+  }, []);
 
   const signOut = useCallback(async () => {
     setError(null);

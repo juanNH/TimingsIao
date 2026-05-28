@@ -4,6 +4,60 @@ create table if not exists public.boss_records (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.app_users (
+  username text primary key,
+  is_active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.app_users enable row level security;
+
+drop policy if exists "Public register app users" on public.app_users;
+create policy "Public register app users"
+on public.app_users
+for insert
+to anon, authenticated
+with check (is_active = false);
+
+create or replace function public.normalize_app_username(value text)
+returns text
+language sql
+immutable
+as $$
+  select lower(trim(value));
+$$;
+
+create or replace function public.get_app_user(p_username text)
+returns table (
+  username text,
+  is_active boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select app_users.username, app_users.is_active
+  from public.app_users
+  where app_users.username = public.normalize_app_username(p_username)
+  limit 1;
+$$;
+
+create or replace function public.is_active_app_user(p_username text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.app_users
+    where username = public.normalize_app_username(p_username)
+      and is_active = true
+  );
+$$;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
@@ -65,14 +119,19 @@ $$;
 alter table public.boss_records enable row level security;
 
 drop policy if exists "Public read boss records" on public.boss_records;
+create policy "Public read boss records"
+on public.boss_records
+for select
+to anon
+using (true);
 
 drop policy if exists "Authenticated read boss records" on public.boss_records;
 drop policy if exists "Active users read boss records" on public.boss_records;
-create policy "Active users read boss records"
+create policy "Authenticated read boss records"
 on public.boss_records
 for select
 to authenticated
-using (public.is_active_user());
+using (true);
 
 drop policy if exists "Public upsert boss records" on public.boss_records;
 drop policy if exists "Active users insert boss records" on public.boss_records;
@@ -131,6 +190,65 @@ before insert or update on public.boss_records
 for each row
 execute function public.set_boss_record_actor();
 
+create or replace function public.save_boss_record(
+  p_username text,
+  p_boss_id text,
+  p_last_seen_at timestamptz,
+  p_last_notified_window text default null
+)
+returns table (
+  boss_id text,
+  last_seen_at timestamptz,
+  updated_at timestamptz,
+  last_notified_window text,
+  changed_by_user_id uuid,
+  changed_by_username text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized_username text := public.normalize_app_username(p_username);
+begin
+  if not public.is_active_app_user(normalized_username) then
+    raise exception 'El usuario no esta activo.';
+  end if;
+
+  return query
+  insert into public.boss_records (
+    boss_id,
+    last_seen_at,
+    updated_at,
+    last_notified_window,
+    changed_by_user_id,
+    changed_by_username
+  )
+  values (
+    p_boss_id,
+    p_last_seen_at,
+    now(),
+    p_last_notified_window,
+    null,
+    normalized_username
+  )
+  on conflict (boss_id) do update
+  set
+    last_seen_at = excluded.last_seen_at,
+    updated_at = excluded.updated_at,
+    last_notified_window = excluded.last_notified_window,
+    changed_by_user_id = null,
+    changed_by_username = normalized_username
+  returning
+    public.boss_records.boss_id,
+    public.boss_records.last_seen_at,
+    public.boss_records.updated_at,
+    public.boss_records.last_notified_window,
+    public.boss_records.changed_by_user_id,
+    public.boss_records.changed_by_username;
+end;
+$$;
+
 create table if not exists public.boss_record_history (
   id bigserial primary key,
   boss_id text not null,
@@ -162,14 +280,19 @@ add column if not exists changed_by_username text;
 alter table public.boss_record_history enable row level security;
 
 drop policy if exists "Public read boss record history" on public.boss_record_history;
+create policy "Public read boss record history"
+on public.boss_record_history
+for select
+to anon
+using (true);
 
 drop policy if exists "Authenticated read boss record history" on public.boss_record_history;
 drop policy if exists "Active users read boss record history" on public.boss_record_history;
-create policy "Active users read boss record history"
+create policy "Authenticated read boss record history"
 on public.boss_record_history
 for select
 to authenticated
-using (public.is_active_user());
+using (true);
 
 create or replace function public.log_boss_record_history()
 returns trigger
