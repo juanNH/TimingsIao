@@ -25,12 +25,14 @@ function formatSnapshot(record: Record<string, unknown> | null) {
 
 export function HistoryView() {
   const {
+    bossId,
     error,
     items,
     loading,
     page,
     total,
     totalPages,
+    filterByBoss,
     refresh,
     setPage
   } = useHistory();
@@ -42,9 +44,26 @@ export function HistoryView() {
           <p className="eyebrow">Auditoria</p>
           <h2 className="section-title">Historial de timings</h2>
         </div>
-        <button className="secondary-button" type="button" onClick={refresh}>
-          Actualizar
-        </button>
+        <div className="history-actions">
+          <label>
+            <span className="field-label">Boss</span>
+            <select
+              className="select-input"
+              value={bossId}
+              onChange={(event) => filterByBoss(event.target.value)}
+            >
+              <option value="">Todos</option>
+              {BOSSES.map((boss) => (
+                <option key={boss.id} value={boss.id}>
+                  {boss.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="secondary-button" type="button" onClick={refresh}>
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {error ? <p className="error">{error}</p> : null}

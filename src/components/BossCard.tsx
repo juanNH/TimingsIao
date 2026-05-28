@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { type Boss } from "@/lib/bosses";
-import { type BossRecord } from "@/lib/storage";
+import { type BossRecord, type BossRecordHistoryItem } from "@/lib/storage";
 import { formatDisplayDate, formatDisplayTime } from "@/lib/time";
 import {
   calculateWindow,
@@ -16,6 +16,7 @@ type BossCardProps = {
   isSaving: boolean;
   isWriteDisabled: boolean;
   now: Date;
+  recentHistory: BossRecordHistoryItem[];
   record?: BossRecord;
   onDraftChange: (bossId: string, draft: Draft) => void;
   onRegister: (boss: Boss, useCurrentDate: boolean) => void;
@@ -29,6 +30,7 @@ export function BossCard({
   isSaving,
   isWriteDisabled,
   now,
+  recentHistory,
   record,
   onDraftChange,
   onRegister,
@@ -132,6 +134,32 @@ export function BossCard({
             : "--:-- a --:--"}
         </div>
       </div>
+
+      <details className="recent-history">
+        <summary>Ultimos 5 guardados</summary>
+        {recentHistory.length > 0 ? (
+          <ol className="recent-history-list">
+            {recentHistory.map((item) => {
+              const changedAt = new Date(item.changedAt);
+              const newDate = new Date(item.newLastSeenAt);
+
+              return (
+                <li key={item.id}>
+                  <span>
+                    {formatDisplayTime(newDate)} - {formatDisplayDate(newDate)}
+                  </span>
+                  <small>
+                    {item.changedByUsername ?? "Sistema"} ·{" "}
+                    {formatDisplayTime(changedAt)}
+                  </small>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="recent-history-empty">Sin guardados recientes.</p>
+        )}
+      </details>
     </article>
   );
 }

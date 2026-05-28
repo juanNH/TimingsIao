@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { BOSSES, type Boss } from "@/lib/bosses";
 import {
   loadRecords,
+  loadRecentHistoryByBoss,
   saveRecord,
+  type BossRecordHistoryItem,
   type BossRecord,
   type StorageMode
 } from "@/lib/storage";
@@ -35,6 +37,9 @@ function errorMessage(error: unknown, fallback: string) {
 
 export function useBossTimings() {
   const [records, setRecords] = useState<Record<string, BossRecord>>({});
+  const [recentHistory, setRecentHistory] = useState<
+    Record<string, BossRecordHistoryItem[]>
+  >({});
   const [undoRecords, setUndoRecords] = useState<Record<string, BossRecord>>(
     {}
   );
@@ -48,6 +53,17 @@ export function useBossTimings() {
   useEffect(() => {
     let active = true;
 
+    async function loadRecentHistory() {
+      try {
+        const history = await loadRecentHistoryByBoss({ perBoss: 5 });
+        if (!active) return;
+        setRecentHistory(history);
+      } catch {
+        if (!active) return;
+        setRecentHistory({});
+      }
+    }
+
     async function loadInitialRecords() {
       try {
         const { records: loadedRecords, mode } = await loadRecords();
@@ -57,6 +73,7 @@ export function useBossTimings() {
         setRecords(nextRecords);
         setDrafts(buildDrafts(nextRecords));
         setStorageMode(mode);
+        void loadRecentHistory();
       } catch (loadError) {
         if (!active) return;
 
@@ -70,6 +87,15 @@ export function useBossTimings() {
     return () => {
       active = false;
     };
+  }, []);
+
+  const refreshRecentHistory = useCallback(async () => {
+    try {
+      const history = await loadRecentHistoryByBoss({ perBoss: 5 });
+      setRecentHistory(history);
+    } catch {
+      setRecentHistory({});
+    }
   }, []);
 
   useEffect(() => {
@@ -121,13 +147,14 @@ export function useBossTimings() {
           [boss.id]: makeDraft(lastSeenAt)
         }));
         setStorageMode(saved.mode);
+        void refreshRecentHistory();
       } catch (saveError) {
         setError(errorMessage(saveError, "No se pudo guardar el registro."));
       } finally {
         setSavingBossId(null);
       }
     },
-    [drafts, records]
+    [drafts, records, refreshRecentHistory]
   );
 
   const undoBoss = useCallback(
@@ -156,19 +183,21 @@ export function useBossTimings() {
           [boss.id]: makeDraft(new Date(saved.record.lastSeenAt))
         }));
         setStorageMode(saved.mode);
+        void refreshRecentHistory();
       } catch (saveError) {
         setError(errorMessage(saveError, "No se pudo deshacer el registro."));
       } finally {
         setSavingBossId(null);
       }
     },
-    [undoRecords]
+    [refreshRecentHistory, undoRecords]
   );
 
   return {
     drafts,
     error,
     realtimeStatus,
+    recentHistory,
     records,
     savingBossId,
     storageMode,

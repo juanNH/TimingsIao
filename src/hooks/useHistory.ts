@@ -15,6 +15,7 @@ function errorMessage(error: unknown) {
 }
 
 export function useHistory(pageSize = defaultPageSize) {
+  const [bossId, setBossId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<BossRecordHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +35,16 @@ export function useHistory(pageSize = defaultPageSize) {
     setPage(nextPage);
   }, []);
 
+  const filterByBoss = useCallback((nextBossId: string) => {
+    setBossId(nextBossId);
+    setLoading(true);
+    setPage(1);
+  }, []);
+
   useEffect(() => {
     let active = true;
 
-    loadHistory({ page, pageSize })
+    loadHistory({ bossId: bossId || undefined, page, pageSize })
       .then((result) => {
         if (!active) return;
         setError(null);
@@ -56,9 +63,10 @@ export function useHistory(pageSize = defaultPageSize) {
     return () => {
       active = false;
     };
-  }, [page, pageSize, refreshKey]);
+  }, [bossId, page, pageSize, refreshKey]);
 
   return {
+    bossId,
     error,
     items,
     loading,
@@ -66,6 +74,7 @@ export function useHistory(pageSize = defaultPageSize) {
     pageSize,
     total,
     totalPages,
+    filterByBoss,
     refresh,
     setPage: goToPage
   };

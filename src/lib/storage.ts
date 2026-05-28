@@ -162,6 +162,7 @@ export async function saveRecord(input: {
 }
 
 export async function loadHistory(input: {
+  bossId?: string;
   page: number;
   pageSize: number;
 }): Promise<{
@@ -174,14 +175,19 @@ export async function loadHistory(input: {
 
   const from = (input.page - 1) * input.pageSize;
   const to = from + input.pageSize - 1;
-  const { count, data, error } = await supabase
+  let query = supabase
     .from("boss_record_history")
     .select(
       "id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_by_username,changed_at",
       { count: "exact" }
     )
-    .order("changed_at", { ascending: false })
-    .range(from, to);
+    .order("changed_at", { ascending: false });
+
+  if (input.bossId) {
+    query = query.eq("boss_id", input.bossId);
+  }
+
+  const { count, data, error } = await query.range(from, to);
 
   if (error) throw error;
 
@@ -189,4 +195,35 @@ export async function loadHistory(input: {
     items: ((data ?? []) as SupabaseBossRecordHistoryItem[]).map(toHistoryItem),
     total: count ?? 0
   };
+}
+
+export async function loadRecentHistoryByBoss(input: {
+  perBoss: number;
+}): Promise<Record<string, BossRecordHistoryItem[]>> {
+  if (!hasSupabaseConfig() || !supabase) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from("boss_record_history")
+    .select(
+      "id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_by_username,changed_at"
+    )
+    .order("changed_at", { ascending: false })
+    .limit(120);
+
+  if (error) throw error;
+
+  const grouped: Record<string, BossRecordHistoryItem[]> = {};
+
+  for (const item of ((data ?? []) as SupabaseBossRecordHistoryItem[]).map(
+    toHistoryItem
+  )) {
+    const current = grouped[item.bossId] ?? [];
+    if (current.length >= input.perBoss) continue;
+
+    grouped[item.bossId] = [...current, item];
+  }
+
+  return grouped;
 }

@@ -12,6 +12,7 @@ export function TimingsView() {
     drafts,
     error,
     realtimeStatus,
+    recentHistory,
     records,
     savingBossId,
     storageMode,
@@ -66,6 +67,7 @@ export function TimingsView() {
             isWriteDisabled={false}
             key={boss.id}
             now={now}
+            recentHistory={recentHistory[boss.id] ?? []}
             record={records[boss.id]}
             onDraftChange={updateDraft}
             onRegister={registerBoss}
