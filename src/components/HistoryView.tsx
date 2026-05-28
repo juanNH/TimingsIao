@@ -13,6 +13,16 @@ function formatHistoryDate(value: string | null) {
   return `${formatDisplayTime(date)} - ${formatDisplayDate(date)}`;
 }
 
+function formatSnapshot(record: Record<string, unknown> | null) {
+  if (!record) return "Sin datos";
+
+  const entries = Object.entries(record)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .map(([key, value]) => `${key}: ${String(value)}`);
+
+  return entries.length > 0 ? entries.join("\n") : "Sin datos";
+}
+
 export function HistoryView() {
   const {
     error,
@@ -44,8 +54,11 @@ export function HistoryView() {
           <thead>
             <tr>
               <th>Boss</th>
+              <th>Operacion</th>
               <th>Anterior</th>
               <th>Nuevo</th>
+              <th>Snapshot anterior</th>
+              <th>Snapshot nuevo</th>
               <th>Fecha cambio</th>
             </tr>
           </thead>
@@ -56,8 +69,19 @@ export function HistoryView() {
               return (
                 <tr key={item.id}>
                   <td>{bossNames[item.bossId] ?? item.bossId}</td>
+                  <td>{item.operation}</td>
                   <td>{formatHistoryDate(item.previousLastSeenAt)}</td>
                   <td>{formatHistoryDate(item.newLastSeenAt)}</td>
+                  <td>
+                    <pre className="history-snapshot">
+                      {formatSnapshot(item.previousRecord)}
+                    </pre>
+                  </td>
+                  <td>
+                    <pre className="history-snapshot">
+                      {formatSnapshot(item.newRecord)}
+                    </pre>
+                  </td>
                   <td>
                     {formatDisplayTime(changedAt)} -{" "}
                     {formatDisplayDate(changedAt)}
@@ -67,7 +91,7 @@ export function HistoryView() {
             })}
             {!loading && items.length === 0 ? (
               <tr>
-                <td colSpan={4}>Todavia no hay cambios registrados.</td>
+                <td colSpan={7}>Todavia no hay cambios registrados.</td>
               </tr>
             ) : null}
           </tbody>

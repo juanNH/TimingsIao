@@ -17,16 +17,22 @@ export type SupabaseBossRecord = {
 export type BossRecordHistoryItem = {
   id: number;
   bossId: string;
+  operation: string;
   previousLastSeenAt: string | null;
   newLastSeenAt: string;
+  previousRecord: Record<string, unknown> | null;
+  newRecord: Record<string, unknown> | null;
   changedAt: string;
 };
 
 type SupabaseBossRecordHistoryItem = {
   id: number;
   boss_id: string;
+  operation: string;
   previous_last_seen_at: string | null;
   new_last_seen_at: string;
+  previous_record: Record<string, unknown> | null;
+  new_record: Record<string, unknown> | null;
   changed_at: string;
 };
 
@@ -54,8 +60,11 @@ function toHistoryItem(
   return {
     id: row.id,
     bossId: row.boss_id,
+    operation: row.operation,
     previousLastSeenAt: row.previous_last_seen_at,
     newLastSeenAt: row.new_last_seen_at,
+    previousRecord: row.previous_record,
+    newRecord: row.new_record,
     changedAt: row.changed_at
   };
 }
@@ -205,7 +214,7 @@ export async function loadHistory(input: {
   const from = (input.page - 1) * input.pageSize;
   const to = from + input.pageSize - 1;
   const { count, data } = await supabaseRequestWithCount(
-    `boss_record_history?select=id,boss_id,previous_last_seen_at,new_last_seen_at,changed_at&order=changed_at.desc&offset=${from}&limit=${input.pageSize}`,
+    `boss_record_history?select=id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_at&order=changed_at.desc&offset=${from}&limit=${input.pageSize}`,
     {
       headers: {
         Range: `${from}-${to}`

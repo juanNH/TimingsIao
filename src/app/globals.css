@@ -191,7 +191,7 @@ h1 {
 
 .history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 1180px;
   border-collapse: collapse;
 }
 
@@ -218,6 +218,20 @@ h1 {
 
 .history-table tr:last-child td {
   border-bottom: 0;
+}
+
+.history-snapshot {
+  max-width: 280px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--muted);
+  font-family:
+    Consolas,
+    "Courier New",
+    monospace;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .pagination {
