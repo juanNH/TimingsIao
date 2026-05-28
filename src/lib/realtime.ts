@@ -1,8 +1,7 @@
-import { createClient, type RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { type RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { toRecord, type BossRecord, type SupabaseBossRecord } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseTable = process.env.NEXT_PUBLIC_SUPABASE_TABLE ?? "boss_records";
 
 export type RealtimeStatus =
@@ -16,25 +15,16 @@ export function subscribeToBossRecords(options: {
   onRecord: (record: BossRecord) => void;
   onStatus: (status: RealtimeStatus) => void;
 }) {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const client = supabase;
+
+  if (!client) {
     options.onStatus("disabled");
     return () => undefined;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
-    }
-  });
-
   options.onStatus("connecting");
 
-  const channel = supabase
+  const channel = client
     .channel("boss-records")
     .on(
       "postgres_changes",
@@ -67,6 +57,6 @@ export function subscribeToBossRecords(options: {
     });
 
   return () => {
-    void supabase.removeChannel(channel);
+    void client.removeChannel(channel);
   };
 }

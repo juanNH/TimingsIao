@@ -1,8 +1,12 @@
+import { supabase, hasSupabaseConfig } from "@/lib/supabase";
+
 export type BossRecord = {
   bossId: string;
   lastSeenAt: string;
   updatedAt: string;
   lastNotifiedWindow: string | null;
+  changedByUserId: string | null;
+  changedByUsername: string | null;
 };
 
 export type StorageMode = "loading" | "supabase" | "local";
@@ -12,6 +16,8 @@ export type SupabaseBossRecord = {
   last_seen_at: string;
   updated_at: string;
   last_notified_window: string | null;
+  changed_by_user_id: string | null;
+  changed_by_username: string | null;
 };
 
 export type BossRecordHistoryItem = {
@@ -22,6 +28,8 @@ export type BossRecordHistoryItem = {
   newLastSeenAt: string;
   previousRecord: Record<string, unknown> | null;
   newRecord: Record<string, unknown> | null;
+  changedByUserId: string | null;
+  changedByUsername: string | null;
   changedAt: string;
 };
 
@@ -33,24 +41,22 @@ type SupabaseBossRecordHistoryItem = {
   new_last_seen_at: string;
   previous_record: Record<string, unknown> | null;
   new_record: Record<string, unknown> | null;
+  changed_by_user_id: string | null;
+  changed_by_username: string | null;
   changed_at: string;
 };
 
 const localStorageKey = "timings-iao-records";
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseTable = process.env.NEXT_PUBLIC_SUPABASE_TABLE ?? "boss_records";
-
-function hasSupabaseConfig() {
-  return Boolean(supabaseUrl && supabaseAnonKey);
-}
 
 export function toRecord(row: SupabaseBossRecord): BossRecord {
   return {
     bossId: row.boss_id,
     lastSeenAt: row.last_seen_at,
     updatedAt: row.updated_at,
-    lastNotifiedWindow: row.last_notified_window
+    lastNotifiedWindow: row.last_notified_window,
+    changedByUserId: row.changed_by_user_id,
+    changedByUsername: row.changed_by_username
   };
 }
 
@@ -65,6 +71,8 @@ function toHistoryItem(
     newLastSeenAt: row.new_last_seen_at,
     previousRecord: row.previous_record,
     newRecord: row.new_record,
+    changedByUserId: row.changed_by_user_id,
+    changedByUsername: row.changed_by_username,
     changedAt: row.changed_at
   };
 }
@@ -92,71 +100,27 @@ function writeLocalRecord(record: BossRecord) {
   window.localStorage.setItem(localStorageKey, JSON.stringify(nextRecords));
 }
 
-async function supabaseRequest(path: string, init?: RequestInit) {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase no esta configurado.");
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...init?.headers
-    }
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(body || "Supabase rechazo la operacion.");
-  }
-
-  return response.json();
-}
-
-async function supabaseRequestWithCount(path: string, init?: RequestInit) {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase no esta configurado.");
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${supabaseAnonKey}`,
-      "Content-Type": "application/json",
-      Prefer: "count=exact",
-      ...init?.headers
-    }
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(body || "Supabase rechazo la operacion.");
-  }
-
-  return {
-    count: Number(response.headers.get("content-range")?.split("/")[1] ?? 0),
-    data: await response.json()
-  };
-}
-
 export async function loadRecords(): Promise<{
   records: BossRecord[];
   mode: StorageMode;
 }> {
-  if (!hasSupabaseConfig()) {
+  if (!hasSupabaseConfig() || !supabase) {
     return { records: readLocalRecords(), mode: "local" };
   }
 
   try {
-    const rows = (await supabaseRequest(
-      `${supabaseTable}?select=boss_id,last_seen_at,updated_at,last_notified_window`
-    )) as SupabaseBossRecord[];
+    const { data, error } = await supabase
+      .from(supabaseTable)
+      .select(
+        "boss_id,last_seen_at,updated_at,last_notified_window,changed_by_user_id,changed_by_username"
+      );
 
-    return { records: rows.map(toRecord), mode: "supabase" };
+    if (error) throw error;
+
+    return {
+      records: ((data ?? []) as SupabaseBossRecord[]).map(toRecord),
+      mode: "supabase"
+    };
   } catch {
     return { records: readLocalRecords(), mode: "local" };
   }
@@ -171,32 +135,40 @@ export async function saveRecord(input: {
     bossId: input.bossId,
     lastSeenAt: input.lastSeenAt,
     updatedAt: new Date().toISOString(),
-    lastNotifiedWindow: input.lastNotifiedWindow ?? null
+    lastNotifiedWindow: input.lastNotifiedWindow ?? null,
+    changedByUserId: null,
+    changedByUsername: null
   };
 
-  if (!hasSupabaseConfig()) {
+  if (!hasSupabaseConfig() || !supabase) {
     writeLocalRecord(record);
     return { record, mode: "local" };
   }
 
   try {
-    const rows = (await supabaseRequest(`${supabaseTable}?on_conflict=boss_id`, {
-      method: "POST",
-      body: JSON.stringify({
-        boss_id: record.bossId,
-        last_seen_at: record.lastSeenAt,
-        updated_at: record.updatedAt,
-        last_notified_window: record.lastNotifiedWindow
-      }),
-      headers: {
-        Prefer: "resolution=merge-duplicates,return=representation"
-      }
-    })) as SupabaseBossRecord[];
+    const { data, error } = await supabase
+      .from(supabaseTable)
+      .upsert(
+        {
+          boss_id: record.bossId,
+          last_seen_at: record.lastSeenAt,
+          updated_at: record.updatedAt,
+          last_notified_window: record.lastNotifiedWindow
+        },
+        { onConflict: "boss_id" }
+      )
+      .select(
+        "boss_id,last_seen_at,updated_at,last_notified_window,changed_by_user_id,changed_by_username"
+      )
+      .single();
 
-    return { record: toRecord(rows[0]), mode: "supabase" };
-  } catch {
-    writeLocalRecord(record);
-    return { record, mode: "local" };
+    if (error) throw error;
+
+    return { record: toRecord(data as SupabaseBossRecord), mode: "supabase" };
+  } catch (error) {
+    throw error instanceof Error
+      ? error
+      : new Error("No se pudo guardar el registro.");
   }
 }
 
@@ -207,23 +179,25 @@ export async function loadHistory(input: {
   items: BossRecordHistoryItem[];
   total: number;
 }> {
-  if (!hasSupabaseConfig()) {
+  if (!hasSupabaseConfig() || !supabase) {
     return { items: [], total: 0 };
   }
 
   const from = (input.page - 1) * input.pageSize;
   const to = from + input.pageSize - 1;
-  const { count, data } = await supabaseRequestWithCount(
-    `boss_record_history?select=id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_at&order=changed_at.desc&offset=${from}&limit=${input.pageSize}`,
-    {
-      headers: {
-        Range: `${from}-${to}`
-      }
-    }
-  );
+  const { count, data, error } = await supabase
+    .from("boss_record_history")
+    .select(
+      "id,boss_id,operation,previous_last_seen_at,new_last_seen_at,previous_record,new_record,changed_by_user_id,changed_by_username,changed_at",
+      { count: "exact" }
+    )
+    .order("changed_at", { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
 
   return {
-    items: (data as SupabaseBossRecordHistoryItem[]).map(toHistoryItem),
-    total: count
+    items: ((data ?? []) as SupabaseBossRecordHistoryItem[]).map(toHistoryItem),
+    total: count ?? 0
   };
 }

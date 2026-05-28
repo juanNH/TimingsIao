@@ -59,6 +59,7 @@ export function HistoryView() {
               <th>Nuevo</th>
               <th>Snapshot anterior</th>
               <th>Snapshot nuevo</th>
+              <th>Usuario</th>
               <th>Fecha cambio</th>
             </tr>
           </thead>
@@ -82,6 +83,7 @@ export function HistoryView() {
                       {formatSnapshot(item.newRecord)}
                     </pre>
                   </td>
+                  <td>{item.changedByUsername ?? "Sistema"}</td>
                   <td>
                     {formatDisplayTime(changedAt)} -{" "}
                     {formatDisplayDate(changedAt)}
@@ -91,7 +93,7 @@ export function HistoryView() {
             })}
             {!loading && items.length === 0 ? (
               <tr>
-                <td colSpan={7}>Todavia no hay cambios registrados.</td>
+                <td colSpan={8}>Todavia no hay cambios registrados.</td>
               </tr>
             ) : null}
           </tbody>

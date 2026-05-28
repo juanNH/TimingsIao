@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { BossCard } from "@/components/BossCard";
+import { AuthPanel } from "@/components/AuthPanel";
+import { useAuth } from "@/hooks/useAuth";
 import { useBossTimings } from "@/hooks/useBossTimings";
 import { BOSSES } from "@/lib/bosses";
 import { realtimeStatusLabel } from "@/lib/realtime-status";
 
 export function TimingsView() {
   const [now, setNow] = useState(() => new Date());
+  const auth = useAuth();
   const {
     drafts,
     error,
@@ -39,19 +42,30 @@ export function TimingsView() {
           </p>
         </div>
 
-        <aside className="sync-panel" aria-label="Estado de guardado">
-          <p className="sync-title">Guardado</p>
-          <p className="sync-status">
-            {storageMode === "loading" && "Cargando..."}
-            {storageMode === "supabase" && "Supabase"}
-            {storageMode === "local" && "Local del navegador"}
-          </p>
-          <p className="sync-help">
-            {storageMode === "supabase"
-              ? `Los registros se comparten entre dispositivos. Tiempo real: ${realtimeStatusLabel(realtimeStatus)}.`
-              : "Configura Supabase para compartir los datos online."}
-          </p>
-        </aside>
+        <div className="side-panels">
+          <aside className="sync-panel" aria-label="Estado de guardado">
+            <p className="sync-title">Guardado</p>
+            <p className="sync-status">
+              {storageMode === "loading" && "Cargando..."}
+              {storageMode === "supabase" && "Supabase"}
+              {storageMode === "local" && "Local del navegador"}
+            </p>
+            <p className="sync-help">
+              {storageMode === "supabase"
+                ? `Los registros se comparten entre dispositivos. Tiempo real: ${realtimeStatusLabel(realtimeStatus)}.`
+                : "Configura Supabase para compartir los datos online."}
+            </p>
+          </aside>
+          <AuthPanel
+            error={auth.error}
+            isActive={auth.isActive}
+            loading={auth.loading}
+            profile={auth.profile}
+            onLogin={auth.signIn}
+            onLogout={auth.signOut}
+            onRegister={auth.signUp}
+          />
+        </div>
       </section>
 
       {error ? <p className="error">{error}</p> : null}
@@ -63,6 +77,7 @@ export function TimingsView() {
             canUndo={Boolean(undoRecords[boss.id])}
             draft={drafts[boss.id]}
             isSaving={savingBossId === boss.id}
+            isWriteDisabled={!auth.isActive}
             key={boss.id}
             now={now}
             record={records[boss.id]}

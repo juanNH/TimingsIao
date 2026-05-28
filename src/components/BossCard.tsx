@@ -14,6 +14,7 @@ type BossCardProps = {
   canUndo: boolean;
   draft?: Draft;
   isSaving: boolean;
+  isWriteDisabled: boolean;
   now: Date;
   record?: BossRecord;
   onDraftChange: (bossId: string, draft: Draft) => void;
@@ -26,6 +27,7 @@ export function BossCard({
   canUndo,
   draft,
   isSaving,
+  isWriteDisabled,
   now,
   record,
   onDraftChange,
@@ -91,7 +93,7 @@ export function BossCard({
         <button
           className="register-button"
           type="button"
-          disabled={isSaving}
+          disabled={isSaving || isWriteDisabled}
           onClick={() => onRegister(boss, false)}
         >
           {isSaving ? "Guardando..." : "Registrar"}
@@ -100,7 +102,7 @@ export function BossCard({
         <button
           className="register-button"
           type="button"
-          disabled={isSaving}
+          disabled={isSaving || isWriteDisabled}
           onClick={() => onRegister(boss, true)}
         >
           Ahora
@@ -110,7 +112,7 @@ export function BossCard({
       <button
         className="undo-button"
         type="button"
-        disabled={isSaving || !canUndo}
+        disabled={isSaving || isWriteDisabled || !canUndo}
         onClick={() => onUndo(boss)}
       >
         Deshacer ultimo cambio

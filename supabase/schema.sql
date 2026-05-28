@@ -4,6 +4,64 @@ create table if not exists public.boss_records (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text unique not null,
+  is_active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "Users can read own profile" on public.profiles;
+create policy "Users can read own profile"
+on public.profiles
+for select
+to authenticated
+using (auth.uid() = id);
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (
+    id,
+    username
+  )
+  values (
+    new.id,
+    lower(coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)))
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute function public.handle_new_user();
+
+create or replace function public.is_active_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and is_active = true
+  );
+$$;
+
 alter table public.boss_records enable row level security;
 
 drop policy if exists "Public read boss records" on public.boss_records;
@@ -13,22 +71,69 @@ for select
 to anon
 using (true);
 
+drop policy if exists "Authenticated read boss records" on public.boss_records;
+create policy "Authenticated read boss records"
+on public.boss_records
+for select
+to authenticated
+using (true);
+
 drop policy if exists "Public upsert boss records" on public.boss_records;
-create policy "Public upsert boss records"
+drop policy if exists "Active users insert boss records" on public.boss_records;
+create policy "Active users insert boss records"
 on public.boss_records
 for insert
-to anon
-with check (true);
+to authenticated
+with check (public.is_active_user());
 
 drop policy if exists "Public update boss records" on public.boss_records;
-create policy "Public update boss records"
+drop policy if exists "Active users update boss records" on public.boss_records;
+create policy "Active users update boss records"
 on public.boss_records
 for update
-to anon
-using (true)
-with check (true);
+to authenticated
+using (public.is_active_user())
+with check (public.is_active_user());
+
 alter table public.boss_records
 add column if not exists last_notified_window text;
+
+alter table public.boss_records
+add column if not exists changed_by_user_id uuid references public.profiles(id);
+
+alter table public.boss_records
+add column if not exists changed_by_username text;
+
+create or replace function public.set_boss_record_actor()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  actor_username text;
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  select username
+  into actor_username
+  from public.profiles
+  where id = auth.uid();
+
+  new.changed_by_user_id = auth.uid();
+  new.changed_by_username = actor_username;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists boss_record_actor_trigger on public.boss_records;
+create trigger boss_record_actor_trigger
+before insert or update on public.boss_records
+for each row
+execute function public.set_boss_record_actor();
 
 create table if not exists public.boss_record_history (
   id bigserial primary key,
@@ -38,6 +143,8 @@ create table if not exists public.boss_record_history (
   new_last_seen_at timestamptz not null,
   previous_record jsonb,
   new_record jsonb,
+  changed_by_user_id uuid references public.profiles(id),
+  changed_by_username text,
   changed_at timestamptz not null default now()
 );
 
@@ -50,6 +157,12 @@ add column if not exists previous_record jsonb;
 alter table public.boss_record_history
 add column if not exists new_record jsonb;
 
+alter table public.boss_record_history
+add column if not exists changed_by_user_id uuid references public.profiles(id);
+
+alter table public.boss_record_history
+add column if not exists changed_by_username text;
+
 alter table public.boss_record_history enable row level security;
 
 drop policy if exists "Public read boss record history" on public.boss_record_history;
@@ -57,6 +170,13 @@ create policy "Public read boss record history"
 on public.boss_record_history
 for select
 to anon
+using (true);
+
+drop policy if exists "Authenticated read boss record history" on public.boss_record_history;
+create policy "Authenticated read boss record history"
+on public.boss_record_history
+for select
+to authenticated
 using (true);
 
 create or replace function public.log_boss_record_history()
@@ -73,7 +193,9 @@ begin
       previous_last_seen_at,
       new_last_seen_at,
       previous_record,
-      new_record
+      new_record,
+      changed_by_user_id,
+      changed_by_username
     )
     values (
       new.boss_id,
@@ -81,7 +203,9 @@ begin
       null,
       new.last_seen_at,
       null,
-      to_jsonb(new)
+      to_jsonb(new),
+      new.changed_by_user_id,
+      new.changed_by_username
     );
   elsif tg_op = 'UPDATE' and old is distinct from new then
     insert into public.boss_record_history (
@@ -90,7 +214,9 @@ begin
       previous_last_seen_at,
       new_last_seen_at,
       previous_record,
-      new_record
+      new_record,
+      changed_by_user_id,
+      changed_by_username
     )
     values (
       new.boss_id,
@@ -98,7 +224,9 @@ begin
       old.last_seen_at,
       new.last_seen_at,
       to_jsonb(old),
-      to_jsonb(new)
+      to_jsonb(new),
+      new.changed_by_user_id,
+      new.changed_by_username
     );
   elsif tg_op = 'DELETE' then
     insert into public.boss_record_history (
@@ -107,7 +235,9 @@ begin
       previous_last_seen_at,
       new_last_seen_at,
       previous_record,
-      new_record
+      new_record,
+      changed_by_user_id,
+      changed_by_username
     )
     values (
       old.boss_id,
@@ -115,7 +245,9 @@ begin
       old.last_seen_at,
       old.last_seen_at,
       to_jsonb(old),
-      null
+      null,
+      old.changed_by_user_id,
+      old.changed_by_username
     );
   end if;
 
@@ -136,6 +268,8 @@ insert into public.boss_record_history (
   new_last_seen_at,
   previous_record,
   new_record,
+  changed_by_user_id,
+  changed_by_username,
   changed_at
 )
 select
@@ -145,6 +279,8 @@ select
   last_seen_at,
   null,
   to_jsonb(records),
+  changed_by_user_id,
+  changed_by_username,
   updated_at
 from public.boss_records records
 where not exists (
