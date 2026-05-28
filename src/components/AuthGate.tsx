@@ -78,5 +78,19 @@ export function AuthGate({ children }: AuthGateProps) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <div className="session-bar">
+        <span>Usuario: {auth.profile.username}</span>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={auth.signOut}
+        >
+          Salir
+        </button>
+      </div>
+      {children}
+    </>
+  );
 }

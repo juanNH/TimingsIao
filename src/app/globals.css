@@ -55,6 +55,19 @@ button:disabled {
   padding: 28px 0 40px;
 }
 
+.session-bar {
+  display: flex;
+  width: min(1180px, calc(100% - 28px));
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 0 auto -8px;
+  padding-top: 18px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .topbar {
   display: flex;
   align-items: flex-end;
